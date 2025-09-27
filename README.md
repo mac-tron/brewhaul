@@ -36,32 +36,9 @@ cd brewhaul
 
 ### Installation Options
 
-#### Option 1: Run from Repository (Recommended)
-The simplest way - just clone and run:
+#### Clone and run
 ```bash
 ./brewhaul [command]
-```
-
-#### Option 2: Install to PATH
-Add to your system PATH for global access:
-```bash
-# Copy to local bin (create if doesn't exist)
-mkdir -p ~/.local/bin
-cp brewhaul ~/.local/bin/
-
-# Add to PATH in your shell profile (.zshrc or .bash_profile)
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-
-# Now run from anywhere
-brewhaul list
-```
-
-#### Option 3: Create Alias
-Add an alias to your shell configuration:
-```bash
-echo "alias brewhaul='python3 /path/to/brewhaul/brewhaul'" >> ~/.zshrc
-source ~/.zshrc
 ```
 
 ## Usage
@@ -139,29 +116,6 @@ The migration feature:
 4. Backs up applications before removal
 5. Installs via Homebrew and verifies installation
 6. Safely removes old versions after confirmation
-
-## Architecture
-
-```
-brewhaul/
-├── __main__.py          # Entry point
-├── cli.py               # Command-line interface
-├── core/
-│   ├── detector.py      # Application detection logic
-│   ├── manager.py       # Application management utilities
-│   └── migrator.py      # Migration orchestration
-├── providers/
-│   ├── homebrew.py      # Homebrew integration
-│   ├── homebrew_api.py  # Homebrew API client
-│   ├── appstore.py      # App Store detection
-│   └── brew_cache.py    # Caching layer
-├── commands/
-│   ├── list.py          # List command implementation
-│   └── migrate.py       # Migrate command implementation
-└── utils/
-    ├── ui.py            # Terminal UI components
-    └── app_metadata.py  # Application metadata extraction
-```
 
 ## Performance
 
