@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""
+Brewhaul - macOS Application Package Manager
+Execute this script directly or install it in your PATH.
+"""
+
+import sys
+import os
+
+# Add the parent directory to the path so we can import the package
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from cli import main
+
+if __name__ == "__main__":
+    main()

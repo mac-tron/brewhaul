@@ -1,0 +1,1 @@
+"""Package manager integrations for brewhaul."""
