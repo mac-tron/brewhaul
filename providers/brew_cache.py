@@ -126,7 +126,7 @@ class BrewCache:
             Set of installed cask tokens
         """
         # Import here to avoid circular imports
-        from ..utils.ui import subprocess_counter
+        from utils.ui import subprocess_counter
 
         try:
             # Track subprocess calls for performance monitoring

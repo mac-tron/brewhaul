@@ -1,20 +1,40 @@
 """Command-line interface for brewhaul."""
 
 import argparse
-from .utils.ui import Colors, PerformanceTimer, subprocess_counter
-from .core.detector import get_all_applications
-from .providers.homebrew import check_homebrew_installed, get_brew_apps, get_brew_app_paths
-from .commands.list import handle_list_command
-from .commands.migrate import handle_migrate_command
+from utils.ui import Colors, PerformanceTimer, subprocess_counter
+from core.detector import get_all_applications
+from providers.homebrew import check_homebrew_installed, get_brew_apps, get_brew_app_paths
+from commands.list import handle_list_command
+from commands.migrate import handle_migrate_command
 
 
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Manage macOS applications by installation source")
+    parser = argparse.ArgumentParser(
+        description="Manage macOS applications by installation source",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  brewhaul list                    # List all applications by type
+  brewhaul list --type manual      # List only manually installed apps
+  brewhaul list --format json      # Output in JSON format
+
+  brewhaul migrate --dry-run       # Preview what can be migrated
+  brewhaul migrate                 # Interactively migrate apps
+  brewhaul migrate --auto          # Auto-migrate all compatible apps
+
+For more help on a command: brewhaul <command> --help
+        """
+    )
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # List subcommand
-    list_parser = subparsers.add_parser('list', help='List applications by installation type')
+    list_parser = subparsers.add_parser(
+        'list',
+        help='List applications by installation type',
+        description='List applications categorized by their installation source',
+        epilog='Examples:\n  brewhaul list\n  brewhaul list --type manual,homebrew\n  brewhaul list --format json'
+    )
     list_parser.add_argument('--type',
                            default='all',
                            help='Filter by installation type: manual, homebrew, appstore, all, or comma-separated list (default: all)')
@@ -22,7 +42,12 @@ def parse_arguments():
                            help='Output format (default: table)')
 
     # Migrate subcommand (use --dry-run to preview migratable apps)
-    migrate_parser = subparsers.add_parser('migrate', help='Migrate manually installed apps to Homebrew (use --dry-run to check which apps can be migrated)')
+    migrate_parser = subparsers.add_parser(
+        'migrate',
+        help='Migrate manually installed apps to Homebrew',
+        description='Migrate manually installed applications to Homebrew for easier management',
+        epilog='Examples:\n  brewhaul migrate --dry-run\n  brewhaul migrate\n  brewhaul migrate --auto'
+    )
     migrate_parser.add_argument('--dry-run', action='store_true',
                               help='Show what would be migrated without making changes')
     migrate_parser.add_argument('--auto', action='store_true',
@@ -61,6 +86,12 @@ def parse_arguments():
 
 
 def main():
+    import sys
+
+    # If no arguments provided, show help
+    if len(sys.argv) == 1:
+        sys.argv.append('--help')
+
     args = parse_arguments()
 
     # Reset subprocess counter for this run

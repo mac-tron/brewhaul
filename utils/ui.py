@@ -647,10 +647,17 @@ class MigrationTable:
                 status_colored = f"{Colors.GREEN}{status}{Colors.RESET}"
             elif "✗" in status or "Failed" in status:
                 status_colored = f"{Colors.YELLOW}{status}{Colors.RESET}"
+            elif "DEPRECATED" in status or "DISABLED" in status:
+                status_colored = f"{Colors.ORANGE}{status}{Colors.RESET}"
             elif status == "-":
                 status_colored = f"{Colors.DIM}{status}{Colors.RESET}"
             else:
                 status_colored = status
+
+            # Highlight deprecated/disabled packages in the cask name column
+            cask_display = cask_name
+            if "[DEPRECATED" in cask_name or "[DISABLED" in cask_name:
+                cask_display = f"{Colors.ORANGE}{cask_name}{Colors.RESET}"
 
             # Build row - show dash for unchecked items in selection mode
             if not self.checkboxes[app_name] and not show_selection_prompt:
@@ -664,7 +671,7 @@ class MigrationTable:
                 table_rows.append([
                     checkbox,
                     app_name,
-                    cask_name,
+                    cask_display,
                     status_colored
                 ])
 

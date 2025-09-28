@@ -1,8 +1,8 @@
 """List command implementation."""
 
 import json
-from ..utils.ui import Colors, TableFormatter
-from ..core.detector import build_app_registry
+from utils.ui import Colors, TableFormatter
+from core.detector import build_app_registry
 
 
 def handle_list_command(args, apps, brew_cask_names, brew_paths):

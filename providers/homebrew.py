@@ -5,7 +5,7 @@ import subprocess
 import re
 import shlex
 import logging
-from ..utils.ui import Colors, progress_wrapper
+from utils.ui import Colors, progress_wrapper
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def check_homebrew_installed():
 
 def get_brew_apps(force_refresh: bool = False):
     """Get list of apps installed via Homebrew with progress and caching"""
-    from ..utils.ui import ProgressIndicator
+    from utils.ui import ProgressIndicator
     from .brew_cache import get_brew_cache
 
     # Use cache for better performance
@@ -71,7 +71,7 @@ def get_brew_apps(force_refresh: bool = False):
 def get_brew_app_paths():
     """Get paths of all Homebrew cask installed applications using API data with batch optimization"""
     from .homebrew_api import HomebrewAPI
-    from ..utils.app_metadata import get_bundle_identifier
+    from utils.app_metadata import get_bundle_identifier
     import glob
 
     brew_app_paths = []
@@ -160,7 +160,7 @@ def filter_cask_results(casks, app_name, exclude_fonts=True, exclude_dev_tools=T
 
 def check_brew_equivalent_with_api(app_name, app_path, api, exclude_fonts=True, exclude_dev_tools=True):
     """Enhanced check for Homebrew packages using provided API instance"""
-    from ..utils.app_metadata import get_bundle_identifier, clean_app_name
+    from utils.app_metadata import get_bundle_identifier, clean_app_name
 
     # Clean the app name
     clean_name = clean_app_name(app_name)
@@ -170,6 +170,12 @@ def check_brew_equivalent_with_api(app_name, app_path, api, exclude_fonts=True, 
     if result:
         token, info = result
         desc = info.get('desc', '')
+
+        # Check for deprecation status
+        is_deprecated, deprecation_msg = api.is_cask_deprecated(token)
+        if is_deprecated:
+            desc = f"{desc} [{deprecation_msg}]"
+
         return [(token, desc)]
 
     # Try bundle identifier match if app path is provided
@@ -180,6 +186,12 @@ def check_brew_equivalent_with_api(app_name, app_path, api, exclude_fonts=True, 
             if result:
                 token, info = result
                 desc = info.get('desc', '')
+
+                # Check for deprecation status
+                is_deprecated, deprecation_msg = api.is_cask_deprecated(token)
+                if is_deprecated:
+                    desc = f"{desc} [{deprecation_msg}]"
+
                 return [(token, desc)]
 
     # Fall back to brew search for cases not in API

@@ -5,7 +5,7 @@ import subprocess
 import logging
 from typing import Dict, List, Tuple, NamedTuple, Optional
 
-from ..utils.ui import progress_wrapper, ProgressIndicator
+from utils.ui import progress_wrapper, ProgressIndicator
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def is_appstore_app(app_path):
             return True
 
         # Method 2: Check using mas search if available (for edge cases)
-        from ..providers.appstore import check_mas_installed, is_mas_app_by_search
+        from providers.appstore import check_mas_installed, is_mas_app_by_search
         try:
             if check_mas_installed():
                 if is_mas_app_by_search(app_name):
@@ -104,9 +104,9 @@ def is_brew_app(app_path, brew_apps=None, brew_paths=None):
         return True
 
     # Use API-based detection for accurate matching
-    from ..providers.homebrew_api import HomebrewAPI
-    from ..providers.homebrew_installed import is_cask_installed
-    from ..utils.app_metadata import get_bundle_identifier
+    from providers.homebrew_api import HomebrewAPI
+    from providers.homebrew_installed import is_cask_installed
+    from utils.app_metadata import get_bundle_identifier
 
     app_name = os.path.basename(app_path).replace(".app", "")
 

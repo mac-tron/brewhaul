@@ -3,7 +3,7 @@
 import subprocess
 import shlex
 import time
-from ..utils.ui import Colors, StatusIcons, SectionDivider, MigrationTable, ProgressIndicator, StatusLine
+from utils.ui import Colors, StatusIcons, SectionDivider, MigrationTable, ProgressIndicator, StatusLine
 from .manager import is_app_running, kill_app, move_to_trash
 
 
@@ -18,6 +18,30 @@ def _perform_migration(app_name, app_path, cask_name, migration_table=None, stat
         status_line: Optional StatusLine for detailed progress
     """
     try:
+        # Strip any deprecation info from cask_name if present
+        actual_cask_name = cask_name.split(' [')[0] if ' [' in cask_name else cask_name
+
+        # Check if the cask is deprecated before proceeding
+        from providers.homebrew_api import HomebrewAPI
+        api = HomebrewAPI()
+        is_deprecated, deprecation_msg = api.is_cask_deprecated(actual_cask_name)
+
+        if is_deprecated:
+            if migration_table:
+                migration_table.update_status(app_name, f"{StatusIcons.WARNING} {deprecation_msg}")
+                migration_table.render_progress()
+            if status_line:
+                status_line.update("Warning", f"{actual_cask_name} is {deprecation_msg}", "warning")
+            print(f"\n{Colors.YELLOW}Warning: {actual_cask_name} is {deprecation_msg}{Colors.RESET}")
+            print(f"{Colors.YELLOW}The package may not install correctly or may be removed in future Homebrew updates.{Colors.RESET}")
+
+            # Ask user if they want to continue
+            confirm = input(f"Continue with installation anyway? [y/N]: ").lower()
+            if confirm != 'y':
+                if migration_table:
+                    migration_table.update_status(app_name, "Skipped (deprecated)")
+                    migration_table.render_progress()
+                return False
         # Step 1: Move the application to trash
         if migration_table:
             migration_table.update_status(app_name, "Removing")
@@ -36,15 +60,15 @@ def _perform_migration(app_name, app_path, cask_name, migration_table=None, stat
 
         # Run brew install with output shown to user in real-time
         # Security fix: Validate cask_name to prevent command injection
-        if not cask_name or not isinstance(cask_name, str) or len(cask_name) > 100:
+        if not actual_cask_name or not isinstance(actual_cask_name, str) or len(actual_cask_name) > 100:
             print(f"{Colors.YELLOW}Invalid cask name. Migration cancelled.{Colors.RESET}")
             return False
 
         # Track installation progress
         if status_line:
-            status_line.update("Fetching", f"{cask_name} from Homebrew")
+            status_line.update("Fetching", f"{actual_cask_name} from Homebrew")
 
-        process = subprocess.Popen(['brew', 'install', '--cask', cask_name],
+        process = subprocess.Popen(['brew', 'install', '--cask', actual_cask_name],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   universal_newlines=True)
@@ -62,13 +86,13 @@ def _perform_migration(app_name, app_path, cask_name, migration_table=None, stat
                         import re
                         pct_match = re.search(r'(\d+)%', line)
                         if pct_match:
-                            status_line.update("Downloading", f"{cask_name} {pct_match.group(1)}%")
+                            status_line.update("Downloading", f"{actual_cask_name} {pct_match.group(1)}%")
                     else:
-                        status_line.update("Downloading", cask_name)
+                        status_line.update("Downloading", actual_cask_name)
                 elif "Verifying" in line or "checksum" in line.lower():
                     status_line.update("Verifying", "Package signature")
                 elif "Extracting" in line or "extract" in line.lower():
-                    status_line.update("Extracting", f"{cask_name}.app")
+                    status_line.update("Extracting", f"{actual_cask_name}.app")
                 elif "Installing" in line:
                     status_line.update("Installing", f"/Applications/{app_name}")
                 elif "Moving" in line:
@@ -98,7 +122,7 @@ def _perform_migration(app_name, app_path, cask_name, migration_table=None, stat
             migration_table.render_progress()
 
         if status_line:
-            status_line.update("Installed", f"{cask_name} via Homebrew", "success")
+            status_line.update("Installed", f"{actual_cask_name} via Homebrew", "success")
 
         return True
 
@@ -120,7 +144,7 @@ def select_migration_mode(manual_apps_list, manual_app_paths, apps_without_match
     Returns:
         Tuple of (selected_apps, auto_approve, migration_table)
     """
-    from ..providers.homebrew import check_brew_equivalent
+    from providers.homebrew import check_brew_equivalent
     import sys
 
     print(f"\n{Colors.ORANGE}[MIGRATION]{Colors.RESET} Checking apps for Homebrew packages")
@@ -140,6 +164,15 @@ def select_migration_mode(manual_apps_list, manual_app_paths, apps_without_match
         casks = check_brew_equivalent(app_name, app_path)
         if casks:
             cask_name = casks[0][0]  # Use first match
+            cask_desc = casks[0][1] if len(casks[0]) > 1 else ""
+            # Check if deprecation info is in the description
+            if "[DEPRECATED" in cask_desc or "[DISABLED" in cask_desc:
+                # Extract the deprecation info from description and add to cask name
+                import re
+                deprecation_match = re.search(r'\[(DEPRECATED|DISABLED)[^\]]*\]', cask_desc)
+                if deprecation_match:
+                    deprecation_info = deprecation_match.group(0)
+                    cask_name = f"{cask_name} {deprecation_info}"
             apps_with_targets.append((app_name, cask_name))
 
     # Clear the progress line
@@ -263,7 +296,7 @@ def migrate_manual_apps_to_brew(manual_apps_list, manual_app_paths, auto_approve
 
     # Get user's preferred migration mode (unless auto_approve is already set)
     if auto_approve:
-        from ..providers.homebrew import check_brew_equivalent
+        from providers.homebrew import check_brew_equivalent
         import sys
 
         print(f"\n{Colors.ORANGE}[MIGRATION]{Colors.RESET} Checking apps for Homebrew packages")
@@ -282,7 +315,17 @@ def migrate_manual_apps_to_brew(manual_apps_list, manual_app_paths, auto_approve
             app_path = manual_app_paths.get(app_name)
             casks = check_brew_equivalent(app_name, app_path)
             if casks:
-                apps_with_targets.append((app_name, casks[0][0]))
+                cask_name = casks[0][0]  # Use first match
+                cask_desc = casks[0][1] if len(casks[0]) > 1 else ""
+                # Check if deprecation info is in the description
+                if "[DEPRECATED" in cask_desc or "[DISABLED" in cask_desc:
+                    # Extract the deprecation info from description and add to cask name
+                    import re
+                    deprecation_match = re.search(r'\[(DEPRECATED|DISABLED)[^\]]*\]', cask_desc)
+                    if deprecation_match:
+                        deprecation_info = deprecation_match.group(0)
+                        cask_name = f"{cask_name} {deprecation_info}"
+                apps_with_targets.append((app_name, cask_name))
 
         # Clear the progress line
         sys.stdout.write("\r" + " " * 80 + "\r")
@@ -320,7 +363,7 @@ def migrate_manual_apps_to_brew(manual_apps_list, manual_app_paths, auto_approve
         migration_table.render_progress()
 
         # Get available brew casks for this app
-        from ..providers.homebrew import check_brew_equivalent
+        from providers.homebrew import check_brew_equivalent
         casks = check_brew_equivalent(app_name, app_path)
 
         if not casks:

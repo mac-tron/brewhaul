@@ -145,6 +145,12 @@ class HomebrewAPI:
                 'names': cask.get('name', []),
                 'desc': cask.get('desc', ''),
                 'homepage': cask.get('homepage', ''),
+                'deprecated': cask.get('deprecated', False),
+                'deprecation_date': cask.get('deprecation_date'),
+                'deprecation_reason': cask.get('deprecation_reason'),
+                'disabled': cask.get('disabled', False),
+                'disable_date': cask.get('disable_date'),
+                'disable_reason': cask.get('disable_reason'),
             }
 
             # Build app name lookup (store as list to handle multiple casks per app)
@@ -337,6 +343,41 @@ class HomebrewAPI:
                 self._last_refresh_check = 0
             except OSError as e:
                 logger.warning(f"Could not invalidate cache: {e}")
+
+    def is_cask_deprecated(self, token: str) -> Tuple[bool, Optional[str]]:
+        """Check if a cask is deprecated or disabled.
+
+        Returns:
+            Tuple of (is_deprecated, reason_message)
+        """
+        if not self._data:
+            if not self.load_data():
+                return (False, None)
+
+        if token not in self._cask_to_info:
+            return (False, None)
+
+        info = self._cask_to_info[token]
+
+        # Check if disabled (more severe than deprecated)
+        if info.get('disabled'):
+            reason = info.get('disable_reason', 'unknown reason')
+            date = info.get('disable_date', '')
+            if date:
+                return (True, f"DISABLED ({reason}, as of {date})")
+            else:
+                return (True, f"DISABLED ({reason})")
+
+        # Check if deprecated
+        if info.get('deprecated'):
+            reason = info.get('deprecation_reason', 'unknown reason')
+            date = info.get('deprecation_date', '')
+            if date:
+                return (True, f"DEPRECATED ({reason}, as of {date})")
+            else:
+                return (True, f"DEPRECATED ({reason})")
+
+        return (False, None)
 
     def get_cache_status(self) -> dict:
         """Get cache status information for monitoring and debugging.

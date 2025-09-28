@@ -4,17 +4,17 @@ import json
 import os
 import sys
 import re
-from ..utils.ui import Colors, TableFormatter, StatusIcons, SectionDivider, MigrationTable
-from ..core.detector import build_app_registry
-from ..core.manager import is_app_running
-from ..core.migrator import migrate_manual_apps_to_brew
-from ..providers.homebrew import check_brew_equivalent_with_api
+from utils.ui import Colors, TableFormatter, StatusIcons, SectionDivider, MigrationTable
+from core.detector import build_app_registry
+from core.manager import is_app_running
+from core.migrator import migrate_manual_apps_to_brew
+from providers.homebrew import check_brew_equivalent_with_api
 
 
 def handle_migrate_command(args, apps, brew_cask_names=None, brew_paths=None):
     """Handle the migrate subcommand"""
-    from ..providers.homebrew import check_homebrew_installed
-    from ..providers.homebrew_api import HomebrewAPI
+    from providers.homebrew import check_homebrew_installed
+    from providers.homebrew_api import HomebrewAPI
 
     if not check_homebrew_installed():
         print(f"{Colors.YELLOW}Homebrew is not installed. Cannot migrate applications.{Colors.RESET}")
